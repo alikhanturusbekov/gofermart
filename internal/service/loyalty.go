@@ -18,6 +18,9 @@ func NewLoyaltyService(repository repository.Repository) *LoyaltyService {
 
 func (ls *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, number string) error {
 	existingOrder, err := ls.repository.Order().GetByNumber(ctx, number)
+	if err != nil {
+		return err
+	}
 
 	// If order already exists check the owner
 	if existingOrder != nil {
