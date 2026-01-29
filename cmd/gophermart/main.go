@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"github.com/alikhanturusbekov/gofermart/internal/handler"
+	"github.com/alikhanturusbekov/gofermart/internal/middleware"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/setup"
@@ -45,12 +46,21 @@ func setupRouter(database *sql.DB, appConfig *setup.Config) *chi.Mux {
 	r := chi.NewRouter()
 
 	repository := postgres.NewRepository(database)
-	authenticationService := service.NewAuthenticationService(repository, appConfig.AuthenticationSecretKey)
-	mainHandler := handler.NewHandler(authenticationService)
+	authService := service.NewAuthService(repository, appConfig.AuthSecretKey)
+	loyaltyService := service.NewLoyaltyService(repository)
+	mainHandler := handler.NewHandler(authService, loyaltyService)
 
 	// Authentication
 	r.Post("/api/user/register", mainHandler.Register)
 	r.Post("/api/user/login", mainHandler.Login)
+
+	// Requires authentication
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(appConfig.AuthSecretKey))
+
+		// Orders
+		r.Post("/api/user/orders", mainHandler.UploadOrder)
+	})
 
 	return r
 }

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"strings"
 
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 )
@@ -19,4 +20,18 @@ func NewRepository(database *sql.DB) *Repository {
 // User returns user repository
 func (r *Repository) User() repository.UserRepository {
 	return &UserRepository{database: r.database}
+}
+
+// Order returns order repository
+func (r *Repository) Order() repository.OrderRepository {
+	return &OrderRepository{database: r.database}
+}
+
+// isUniqueViolation checks if the error indicates violation of unique constraints
+func isUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return strings.Contains(err.Error(), "SQLSTATE 23505")
 }

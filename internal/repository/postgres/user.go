@@ -5,18 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
+	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
-	"strings"
 )
 
 // UserRepository implementation with database
 type UserRepository struct {
 	database *sql.DB
-}
-
-// scanner interface to get entities from database rows
-type scanner interface {
-	Scan(dest ...any) error
 }
 
 // Create saves user data to database
@@ -31,7 +26,7 @@ func (ur *UserRepository) Create(ctx context.Context, login, password string) (*
 	err := ur.scanUser(ur.database.QueryRowContext(ctx, query, login, password), user)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return nil, repository.ErrLoginExists
+			return nil, exception.ErrRecordExists
 		}
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -57,20 +52,11 @@ func (ur *UserRepository) GetByLogin(ctx context.Context, login string) (*entity
 }
 
 // scanUser gets user entity from row
-func (ur *UserRepository) scanUser(s scanner, user *entity.User) error {
+func (ur *UserRepository) scanUser(s repository.Scanner, user *entity.User) error {
 	return s.Scan(
 		&user.ID,
 		&user.Login,
 		&user.Password,
 		&user.CreatedAt,
 	)
-}
-
-// isUniqueViolation checks if the error indicates violation of unique constraints
-func isUniqueViolation(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	return strings.Contains(err.Error(), "SQLSTATE 23505")
 }

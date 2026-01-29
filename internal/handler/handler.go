@@ -3,21 +3,29 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"github.com/alikhanturusbekov/gofermart/internal/repository"
+	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
+	"github.com/alikhanturusbekov/gofermart/internal/validation"
+	"github.com/google/uuid"
+	"io"
 	"net/http"
+	"strings"
 )
 
 type Handler struct {
-	authenticationService *service.AuthenticationService
+	authService    *service.AuthService
+	loyaltyService *service.LoyaltyService
 }
 
-func NewHandler(authenticationService *service.AuthenticationService) *Handler {
+// NewHandler gets new main handler
+func NewHandler(authService *service.AuthService, loyaltyService *service.LoyaltyService) *Handler {
 	return &Handler{
-		authenticationService: authenticationService,
+		authService:    authService,
+		loyaltyService: loyaltyService,
 	}
 }
 
+// Register registers and returns authentication token for user
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Login    string `json:"login"`
@@ -29,10 +37,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.authenticationService.Register(r.Context(), request.Login, request.Password)
+	token, err := h.authService.Register(r.Context(), request.Login, request.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, repository.ErrLoginExists):
+		case errors.Is(err, exception.ErrRecordExists):
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		default:
@@ -46,6 +54,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }
 
+// Login returns authentication token for user
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Login    string `json:"login"`
@@ -57,7 +66,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.authenticationService.Login(r.Context(), request.Login, request.Password)
+	token, err := h.authService.Login(r.Context(), request.Login, request.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -66,4 +75,41 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Authorization", "Bearer "+token)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
+}
+
+func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
+	// Gets userID from token
+	userID := r.Context().Value("userID").(uuid.UUID)
+
+	// Reads order number
+	body, err := io.ReadAll(r.Body)
+	if err != nil || len(body) == 0 {
+		http.Error(w, "incorrect or empty input for order number", http.StatusBadRequest)
+		return
+	}
+	orderNumber := strings.TrimSpace(string(body))
+
+	// Validates order number
+	if valid := validation.ValidateOrderNumber(orderNumber); !valid {
+		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
+		return
+	}
+
+	// Uploads user order
+	err = h.loyaltyService.UploadOrder(r.Context(), userID, orderNumber)
+	if err != nil {
+		switch {
+		case errors.Is(err, exception.ErrOrderExistsByUser):
+			w.WriteHeader(http.StatusOK)
+			return
+		case errors.Is(err, exception.ErrOrderExistsByOther):
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }

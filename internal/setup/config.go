@@ -12,10 +12,10 @@ const (
 )
 
 type Config struct {
-	RunAddress              string `yaml:"run_address"`
-	DatabaseURI             string `yaml:"database_uri"`
-	AccrualSystemAddress    string `yaml:"accrual_system_address"`
-	AuthenticationSecretKey string `yaml:"authentication_secret_key"`
+	RunAddress           string `yaml:"run_address"`
+	DatabaseURI          string `yaml:"database_uri"`
+	AccrualSystemAddress string `yaml:"accrual_system_address"`
+	AuthSecretKey        string `yaml:"auth_secret_key"`
 }
 
 // LoadConfig loads application configuration
@@ -34,10 +34,10 @@ func LoadConfig() (*Config, error) {
 
 	// Env variables overwrite yaml configurations
 	config = Config{
-		RunAddress:              getEnv("RUN_ADDRESS", config.RunAddress),
-		DatabaseURI:             getEnv("DATABASE_URI", config.DatabaseURI),
-		AccrualSystemAddress:    getEnv("ACCRUAL_SYSTEM_ADDRESS", config.AccrualSystemAddress),
-		AuthenticationSecretKey: getEnv("SECRET_KEY", config.AuthenticationSecretKey),
+		RunAddress:           getEnv("RUN_ADDRESS", config.RunAddress),
+		DatabaseURI:          getEnv("DATABASE_URI", config.DatabaseURI),
+		AccrualSystemAddress: getEnv("ACCRUAL_SYSTEM_ADDRESS", config.AccrualSystemAddress),
+		AuthSecretKey:        getEnv("SECRET_KEY", config.AuthSecretKey),
 	}
 
 	// Flag configurations overwrite env variables

@@ -10,20 +10,20 @@ import (
 	"time"
 )
 
-type AuthenticationService struct {
+type AuthService struct {
 	repository repository.Repository
 	secretKey  string
 }
 
-func NewAuthenticationService(repository repository.Repository, secretKey string) *AuthenticationService {
-	return &AuthenticationService{
+func NewAuthService(repository repository.Repository, secretKey string) *AuthService {
+	return &AuthService{
 		repository: repository,
 		secretKey:  secretKey,
 	}
 }
 
 // Register registers the user to the database
-func (as *AuthenticationService) Register(ctx context.Context, login, password string) (string, error) {
+func (as *AuthService) Register(ctx context.Context, login, password string) (string, error) {
 	// Hashes the password
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -46,7 +46,7 @@ func (as *AuthenticationService) Register(ctx context.Context, login, password s
 }
 
 // Login authenticates the user
-func (as *AuthenticationService) Login(ctx context.Context, login, password string) (string, error) {
+func (as *AuthService) Login(ctx context.Context, login, password string) (string, error) {
 	// Searches for the user
 	user, err := as.repository.User().GetByLogin(ctx, login)
 	if err != nil {
@@ -69,7 +69,7 @@ func (as *AuthenticationService) Login(ctx context.Context, login, password stri
 }
 
 // generateToken generates JWT token
-func (as *AuthenticationService) generateToken(userID uuid.UUID) (string, error) {
+func (as *AuthService) generateToken(userID uuid.UUID) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID.String(),
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
