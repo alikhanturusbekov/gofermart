@@ -12,8 +12,9 @@ const (
 )
 
 type Config struct {
-	ServerAddress           string `yaml:"server_address"`
+	RunAddress              string `yaml:"run_address"`
 	DatabaseURI             string `yaml:"database_uri"`
+	AccrualSystemAddress    string `yaml:"accrual_system_address"`
 	AuthenticationSecretKey string `yaml:"authentication_secret_key"`
 }
 
@@ -32,8 +33,9 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Flag configurations overwrite yaml configurations
-	flag.StringVar(&config.ServerAddress, "a", config.ServerAddress, "HTTP server start address")
+	flag.StringVar(&config.RunAddress, "a", config.RunAddress, "HTTP server run address")
 	flag.StringVar(&config.DatabaseURI, "d", config.DatabaseURI, "Database connection string")
+	flag.StringVar(&config.AccrualSystemAddress, "r", config.DatabaseURI, "Accrual system address")
 	flag.Parse()
 
 	// Validate the configs are valid
@@ -47,8 +49,8 @@ func LoadConfig() (*Config, error) {
 
 // validate validates that the config is acceptable
 func (c *Config) validate() error {
-	if (c.ServerAddress == "") || (c.DatabaseURI == "") {
-		return errors.New("must specify all configs: server_address, database_dsn")
+	if (c.RunAddress == "") || (c.DatabaseURI == "") {
+		return errors.New("must specify all configs: run_address, database_dsn")
 	}
 
 	return nil

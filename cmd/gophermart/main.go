@@ -38,7 +38,7 @@ func run() error {
 	r := setupRouter(database, appConfig)
 
 	// Serves the Application
-	return http.ListenAndServe(appConfig.ServerAddress, r)
+	return http.ListenAndServe(appConfig.RunAddress, r)
 }
 
 func setupRouter(database *sql.DB, appConfig *setup.Config) *chi.Mux {

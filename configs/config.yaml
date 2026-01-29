@@ -1,4 +1,5 @@
 # Configuration rules
-server_address: localhost:8080
+run_address: :8080
 database_uri: postgres://postgres:postgres@localhost:5432/gofermart
+accrual_system_address: :8081
 authentication_secret_key: super-secret-key
