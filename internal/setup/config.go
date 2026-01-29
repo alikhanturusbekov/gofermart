@@ -35,7 +35,7 @@ func LoadConfig() (*Config, error) {
 	// Flag configurations overwrite yaml configurations
 	flag.StringVar(&config.RunAddress, "a", config.RunAddress, "HTTP server run address")
 	flag.StringVar(&config.DatabaseURI, "d", config.DatabaseURI, "Database connection string")
-	flag.StringVar(&config.AccrualSystemAddress, "r", config.DatabaseURI, "Accrual system address")
+	flag.StringVar(&config.AccrualSystemAddress, "r", config.AccrualSystemAddress, "Accrual system address")
 	flag.Parse()
 
 	// Validate the configs are valid
