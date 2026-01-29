@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
-	"github.com/google/uuid"
 	"net/http"
 )
 
@@ -30,7 +29,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := h.authenticationService.Register(r.Context(), request.Login, request.Password)
+	token, err := h.authenticationService.Register(r.Context(), request.Login, request.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrLoginExists):
@@ -42,8 +41,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Authorization", "Bearer "+token)
 	w.WriteHeader(http.StatusOK) // According to task 200, not 201
-	json.NewEncoder(w).Encode(map[string]uuid.UUID{"user_id": *userID})
+	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
