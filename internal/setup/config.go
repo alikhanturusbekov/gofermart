@@ -32,7 +32,15 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	// Flag configurations overwrite yaml configurations
+	// Env variables overwrite yaml configurations
+	config = Config{
+		RunAddress:              getEnv("RUN_ADDRESS", config.RunAddress),
+		DatabaseURI:             getEnv("DATABASE_URI", config.DatabaseURI),
+		AccrualSystemAddress:    getEnv("ACCRUAL_SYSTEM_ADDRESS", config.AccrualSystemAddress),
+		AuthenticationSecretKey: getEnv("SECRET_KEY", config.AuthenticationSecretKey),
+	}
+
+	// Flag configurations overwrite env variables
 	flag.StringVar(&config.RunAddress, "a", config.RunAddress, "HTTP server run address")
 	flag.StringVar(&config.DatabaseURI, "d", config.DatabaseURI, "Database connection string")
 	flag.StringVar(&config.AccrualSystemAddress, "r", config.AccrualSystemAddress, "Accrual system address")
@@ -54,4 +62,13 @@ func (c *Config) validate() error {
 	}
 
 	return nil
+}
+
+// getEnv gets environment variable
+func getEnv(envVar, defaultValue string) string {
+	if val, exists := os.LookupEnv(envVar); exists {
+		return val
+	}
+
+	return defaultValue
 }
