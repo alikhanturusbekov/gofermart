@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+// contextKey private type for context keys
+type contextKey string
+
+// userIDKey context key for current user's ID
+const userIDKey contextKey = "userID"
+
 // AuthMiddleware to enforce the authentication of the user
 func AuthMiddleware(secretKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -65,7 +71,7 @@ func AuthMiddleware(secretKey string) func(http.Handler) http.Handler {
 			}
 
 			// Stores userID in context
-			ctx := context.WithValue(r.Context(), "userID", userID)
+			ctx := context.WithValue(r.Context(), userIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
