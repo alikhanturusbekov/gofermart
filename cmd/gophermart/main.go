@@ -1,12 +1,14 @@
 package main
 
 import (
-	"database/sql"
+	"context"
+	"github.com/alikhanturusbekov/gofermart/internal/client"
 	"github.com/alikhanturusbekov/gofermart/internal/handler"
 	"github.com/alikhanturusbekov/gofermart/internal/middleware"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/setup"
+	"github.com/alikhanturusbekov/gofermart/internal/worker"
 	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
@@ -22,6 +24,9 @@ func main() {
 }
 
 func run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Gets the application config
 	appConfig, err := setup.LoadConfig()
 	if err != nil {
@@ -35,31 +40,41 @@ func run() error {
 	}
 	defer database.Close()
 
-	// Setups the Router
-	r := setupRouter(database, appConfig)
+	// Setups repository
+	repository := postgres.NewRepository(database)
+
+	// Setups client
+	accrualClient := client.NewClient(appConfig.AccrualSystemAddress, client.DefaultTimeout)
+
+	// Setups worker
+	orderProcessWorker := worker.NewOrderProcessWorker(repository, accrualClient, worker.DefaultBufferSize)
+	go orderProcessWorker.Run(ctx)
+
+	// Setups services
+	authService := service.NewAuthService(repository, appConfig.AuthSecretKey)
+	loyaltyService := service.NewLoyaltyService(repository, orderProcessWorker)
+
+	// Setups handler and router
+	mainHandler := handler.NewHandler(authService, loyaltyService)
+	r := setupRouter(appConfig, mainHandler)
 
 	// Serves the Application
 	return http.ListenAndServe(appConfig.RunAddress, r)
 }
 
-func setupRouter(database *sql.DB, appConfig *setup.Config) *chi.Mux {
+func setupRouter(appConfig *setup.Config, handler *handler.Handler) *chi.Mux {
 	r := chi.NewRouter()
 
-	repository := postgres.NewRepository(database)
-	authService := service.NewAuthService(repository, appConfig.AuthSecretKey)
-	loyaltyService := service.NewLoyaltyService(repository)
-	mainHandler := handler.NewHandler(authService, loyaltyService)
-
 	// Authentication
-	r.Post("/api/user/register", mainHandler.Register)
-	r.Post("/api/user/login", mainHandler.Login)
+	r.Post("/api/user/register", handler.Register)
+	r.Post("/api/user/login", handler.Login)
 
 	// Requires authentication
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(appConfig.AuthSecretKey))
 
 		// Orders
-		r.Post("/api/user/orders", mainHandler.UploadOrder)
+		r.Post("/api/user/orders", handler.UploadOrder)
 	})
 
 	return r
