@@ -19,8 +19,8 @@ func NewLoyaltyService(repository repository.Repository, orderProcessWorker *wor
 	return &LoyaltyService{repository: repository, orderProcessWorker: orderProcessWorker}
 }
 
-func (ls *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, number string) error {
-	existingOrder, err := ls.repository.Order().GetByNumber(ctx, number)
+func (s *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, number string) error {
+	existingOrder, err := s.repository.Order().GetByNumber(ctx, number)
 	if err != nil {
 		return err
 	}
@@ -34,12 +34,12 @@ func (ls *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, num
 		}
 	}
 
-	_, err = ls.repository.Order().Create(ctx, userID, number)
+	_, err = s.repository.Order().Create(ctx, userID, number)
 	if err != nil {
 		return err
 	}
 
-	ls.orderProcessWorker.Enqueue(entity.OrderProcessTask{Number: number})
+	s.orderProcessWorker.Enqueue(entity.OrderProcessTask{Number: number})
 
 	return nil
 }

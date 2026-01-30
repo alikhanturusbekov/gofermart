@@ -23,7 +23,7 @@ func NewAuthService(repository repository.Repository, secretKey string) *AuthSer
 }
 
 // Register registers the user to the database
-func (as *AuthService) Register(ctx context.Context, login, password string) (string, error) {
+func (s *AuthService) Register(ctx context.Context, login, password string) (string, error) {
 	// Hashes the password
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -31,13 +31,13 @@ func (as *AuthService) Register(ctx context.Context, login, password string) (st
 	}
 
 	// Adds user to the database
-	user, err := as.repository.User().Create(ctx, login, string(passwordHash))
+	user, err := s.repository.User().Create(ctx, login, string(passwordHash))
 	if err != nil {
 		return "", err
 	}
 
 	// Generates authentication token
-	token, err := as.generateToken(user.ID)
+	token, err := s.generateToken(user.ID)
 	if err != nil {
 		return "", err
 	}
@@ -46,9 +46,9 @@ func (as *AuthService) Register(ctx context.Context, login, password string) (st
 }
 
 // Login authenticates the user
-func (as *AuthService) Login(ctx context.Context, login, password string) (string, error) {
+func (s *AuthService) Login(ctx context.Context, login, password string) (string, error) {
 	// Searches for the user
-	user, err := as.repository.User().GetByLogin(ctx, login)
+	user, err := s.repository.User().GetByLogin(ctx, login)
 	if err != nil {
 		return "", errors.New("user not found")
 	}
@@ -60,7 +60,7 @@ func (as *AuthService) Login(ctx context.Context, login, password string) (strin
 	}
 
 	// Generates authentication token
-	token, err := as.generateToken(user.ID)
+	token, err := s.generateToken(user.ID)
 	if err != nil {
 		return "", err
 	}
@@ -69,11 +69,11 @@ func (as *AuthService) Login(ctx context.Context, login, password string) (strin
 }
 
 // generateToken generates JWT token
-func (as *AuthService) generateToken(userID uuid.UUID) (string, error) {
+func (s *AuthService) generateToken(userID uuid.UUID) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID.String(),
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(as.secretKey))
+	return token.SignedString([]byte(s.secretKey))
 }

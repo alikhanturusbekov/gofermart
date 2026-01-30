@@ -15,7 +15,7 @@ type UserRepository struct {
 }
 
 // Create saves user data to database
-func (ur *UserRepository) Create(ctx context.Context, login, password string) (*entity.User, error) {
+func (r *UserRepository) Create(ctx context.Context, login, password string) (*entity.User, error) {
 	query := `
 		INSERT INTO users (login, password)
 		VALUES ($1, $2)
@@ -23,7 +23,7 @@ func (ur *UserRepository) Create(ctx context.Context, login, password string) (*
 	`
 
 	user := &entity.User{}
-	err := ur.scanUser(ur.database.QueryRowContext(ctx, query, login, password), user)
+	err := r.scanUser(r.database.QueryRowContext(ctx, query, login, password), user)
 	if err != nil {
 		if isUniqueViolation(err) {
 			return nil, exception.ErrRecordExists
@@ -35,7 +35,7 @@ func (ur *UserRepository) Create(ctx context.Context, login, password string) (*
 }
 
 // GetByLogin gets one user by login
-func (ur *UserRepository) GetByLogin(ctx context.Context, login string) (*entity.User, error) {
+func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*entity.User, error) {
 	query := `
 		SELECT id, login, password, created_at
 		FROM users
@@ -43,7 +43,7 @@ func (ur *UserRepository) GetByLogin(ctx context.Context, login string) (*entity
 	`
 
 	user := &entity.User{}
-	err := ur.scanUser(ur.database.QueryRowContext(ctx, query, login), user)
+	err := r.scanUser(r.database.QueryRowContext(ctx, query, login), user)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by login: %w", err)
 	}
@@ -52,7 +52,7 @@ func (ur *UserRepository) GetByLogin(ctx context.Context, login string) (*entity
 }
 
 // scanUser gets user entity from row
-func (ur *UserRepository) scanUser(s repository.Scanner, user *entity.User) error {
+func (r *UserRepository) scanUser(s repository.Scanner, user *entity.User) error {
 	return s.Scan(
 		&user.ID,
 		&user.Login,
