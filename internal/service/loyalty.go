@@ -43,3 +43,12 @@ func (s *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, numb
 
 	return nil
 }
+
+// GetUserOrders gets all orders owned by user
+func (s *LoyaltyService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error) {
+	orders, err := s.repository.Order().GetAllByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
+}

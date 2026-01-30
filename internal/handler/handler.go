@@ -78,6 +78,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }
 
+// UploadOrder uploads an order for user
 func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	// Gets userID from token
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
@@ -113,4 +114,26 @@ func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// GetUserOrders gets all orders owned by user
+func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
+	// Gets userID from token
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Uploads user order
+	orders, err := h.loyaltyService.GetUserOrders(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(orders) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(orders)
 }

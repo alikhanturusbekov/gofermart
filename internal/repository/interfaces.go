@@ -27,6 +27,7 @@ type UserRepository interface {
 type OrderRepository interface {
 	Create(ctx context.Context, userID uuid.UUID, number string) (*entity.Order, error)
 	GetByNumber(ctx context.Context, number string) (*entity.Order, error)
+	GetAllByUser(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error)
 	UpdateOrderStatus(ctx context.Context, number string, status entity.OrderStatus) (*entity.Order, error)
 	MarkOrderProcessed(ctx context.Context, number string, accrual *float64) (*entity.Order, error)
 }

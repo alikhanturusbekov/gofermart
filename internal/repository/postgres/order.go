@@ -99,6 +99,40 @@ func (r *OrderRepository) MarkOrderProcessed(ctx context.Context, number string,
 	return order, nil
 }
 
+// GetAllByUser gets all orders by user
+func (r *OrderRepository) GetAllByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+) ([]*entity.Order, error) {
+	query := `
+		SELECT id, user_id, number, status, accrual, uploaded_at
+		FROM orders
+		WHERE user_id = $1
+		ORDER BY uploaded_at DESC
+	`
+
+	rows, err := r.database.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders by user: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []*entity.Order
+	for rows.Next() {
+		order := &entity.Order{}
+		if err := r.scanOrder(rows, order); err != nil {
+			return nil, fmt.Errorf("failed to scan order: %w", err)
+		}
+		orders = append(orders, order)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return orders, nil
+}
+
 // scanOrder gets order entity from row
 func (r *OrderRepository) scanOrder(s repository.Scanner, order *entity.Order) error {
 	var accrual sql.NullFloat64 // helper for nullable float64

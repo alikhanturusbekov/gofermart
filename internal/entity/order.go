@@ -16,8 +16,8 @@ const (
 )
 
 type Order struct {
-	ID         uuid.UUID   `json:"id"`
-	UserID     uuid.UUID   `json:"user_id"`
+	ID         uuid.UUID   `json:"-"`
+	UserID     uuid.UUID   `json:"-"`
 	Number     string      `json:"number"`
 	Status     OrderStatus `json:"status"`
 	Accrual    *float64    `json:"accrual,omitempty"`

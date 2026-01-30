@@ -74,6 +74,7 @@ func setupRouter(appConfig *setup.Config, handler *handler.Handler) *chi.Mux {
 		r.Use(middleware.AuthMiddleware(appConfig.AuthSecretKey))
 
 		// Orders
+		r.Get("/api/user/orders", handler.GetUserOrders)
 		r.Post("/api/user/orders", handler.UploadOrder)
 	})
 
