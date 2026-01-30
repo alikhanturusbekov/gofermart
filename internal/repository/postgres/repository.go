@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 
@@ -25,6 +26,11 @@ func (r *Repository) User() repository.UserRepository {
 // Order returns order repository
 func (r *Repository) Order() repository.OrderRepository {
 	return &OrderRepository{database: r.database}
+}
+
+// BeginTx begins transaction
+func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return r.database.BeginTx(ctx, nil)
 }
 
 // isUniqueViolation checks if the error indicates violation of unique constraints

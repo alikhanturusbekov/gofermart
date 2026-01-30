@@ -77,19 +77,18 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, number string, 
 	return order, nil
 }
 
-// MarkOrderProcessed updates order status and inserts accrual
-func (r *OrderRepository) MarkOrderProcessed(ctx context.Context, number string, accrual *float64) (*entity.Order, error) {
+// MarkOrderProcessedTx updates order status and inserts accrual
+func (r *OrderRepository) MarkOrderProcessedTx(ctx context.Context, tx *sql.Tx, number string, accrual *float64) (*entity.Order, error) {
 	query := `
 		UPDATE orders
-		SET status = $2,
-		    accrual = $3
+		SET status = $2, accrual = $3
 		WHERE number = $1
 		RETURNING id, user_id, number, status, accrual, uploaded_at
 	`
 
 	order := &entity.Order{}
 	err := r.scanOrder(
-		r.database.QueryRowContext(ctx, query, number, entity.StatusProcessed, accrual),
+		tx.QueryRowContext(ctx, query, number, entity.StatusProcessed, accrual),
 		order,
 	)
 	if err != nil {

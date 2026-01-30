@@ -93,7 +93,28 @@ func (w *OrderProcessWorker) processOrder(ctx context.Context, task entity.Order
 		}
 
 		if result.Status == string(entity.StatusProcessed) {
-			_, _ = w.repository.Order().MarkOrderProcessed(ctx, order.Number, result.Accrual)
+			tx, err := w.repository.BeginTx(ctx)
+			if err != nil {
+				return
+			}
+			defer tx.Rollback()
+
+			_, err = w.repository.Order().MarkOrderProcessedTx(ctx, tx, order.Number, result.Accrual)
+			if err != nil {
+				tx.Rollback()
+				return
+			}
+
+			err = w.repository.User().AddUserBalanceTx(ctx, tx, order.UserID, result.Accrual)
+			if err != nil {
+				tx.Rollback()
+				return
+			}
+
+			err = tx.Commit()
+			if err != nil {
+				return
+			}
 		}
 
 		if result.Status == string(entity.StatusInvalid) {

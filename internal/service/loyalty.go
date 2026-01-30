@@ -52,3 +52,12 @@ func (s *LoyaltyService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([
 	}
 	return orders, nil
 }
+
+// GetUserBalance gets user balance
+func (s *LoyaltyService) GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error) {
+	orders, err := s.repository.User().GetUserBalance(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
+}

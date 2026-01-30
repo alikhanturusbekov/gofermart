@@ -76,6 +76,9 @@ func setupRouter(appConfig *setup.Config, handler *handler.Handler) *chi.Mux {
 		// Orders
 		r.Get("/api/user/orders", handler.GetUserOrders)
 		r.Post("/api/user/orders", handler.UploadOrder)
+
+		// Balance
+		r.Get("/api/user/balance", handler.GetUserBalance)
 	})
 
 	return r

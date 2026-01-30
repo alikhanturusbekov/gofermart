@@ -7,6 +7,7 @@ import (
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
+	"github.com/google/uuid"
 )
 
 // UserRepository implementation with database
@@ -14,21 +15,44 @@ type UserRepository struct {
 	database *sql.DB
 }
 
-// Create saves user data to database
-func (r *UserRepository) Create(ctx context.Context, login, password string) (*entity.User, error) {
-	query := `
-		INSERT INTO users (login, password)
-		VALUES ($1, $2)
-		RETURNING id, login, password, created_at
-	`
-
-	user := &entity.User{}
-	err := r.scanUser(r.database.QueryRowContext(ctx, query, login, password), user)
+// CreateUserWithBalance create user and balance
+func (r *UserRepository) CreateUserWithBalance(ctx context.Context, login, password string) (*entity.User, error) {
+	tx, err := r.database.BeginTx(ctx, nil)
 	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Create user
+	queryUser := `
+        INSERT INTO users (login, password)
+        VALUES ($1, $2)
+        RETURNING id, login, password, created_at
+    `
+	user := &entity.User{}
+	err = r.scanUser(tx.QueryRowContext(ctx, queryUser, login, password), user)
+	if err != nil {
+		tx.Rollback()
 		if isUniqueViolation(err) {
 			return nil, exception.ErrRecordExists
 		}
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Create user balance
+	queryBalance := `
+        INSERT INTO user_balances (user_id)
+        VALUES ($1)
+    `
+	_, err = tx.ExecContext(ctx, queryBalance, user.ID)
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to create user balance: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return user, nil
@@ -51,6 +75,34 @@ func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*entity.
 	return user, nil
 }
 
+// GetUserBalance gets user balance
+func (r *UserRepository) GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error) {
+	query := `
+		SELECT user_id, user_balances.current, withdrawn
+		FROM user_balances
+		WHERE user_id = $1
+	`
+
+	userBalance := &entity.UserBalance{}
+	err := r.scanUserBalance(r.database.QueryRowContext(ctx, query, userID), userBalance)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user balance: %w", err)
+	}
+
+	return userBalance, nil
+}
+
+// AddUserBalanceTx adds current balance within transaction
+func (r *UserRepository) AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, accrual *float64) error {
+	query := `
+		UPDATE user_balances 
+		SET current = current + $1 
+		WHERE user_id = $2
+		RETURNING user_id, user_balances.current, withdrawn`
+	_, err := tx.ExecContext(ctx, query, accrual, userID)
+	return err
+}
+
 // scanUser gets user entity from row
 func (r *UserRepository) scanUser(s repository.Scanner, user *entity.User) error {
 	return s.Scan(
@@ -58,5 +110,14 @@ func (r *UserRepository) scanUser(s repository.Scanner, user *entity.User) error
 		&user.Login,
 		&user.Password,
 		&user.CreatedAt,
+	)
+}
+
+// scanUserBalance gets userBalance entity from row
+func (r *UserRepository) scanUserBalance(s repository.Scanner, userBalance *entity.UserBalance) error {
+	return s.Scan(
+		&userBalance.UserID,
+		&userBalance.Current,
+		&userBalance.Withdrawn,
 	)
 }

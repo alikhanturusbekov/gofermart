@@ -118,10 +118,8 @@ func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 
 // GetUserOrders gets all orders owned by user
 func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
-	// Gets userID from token
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
-	// Uploads user order
 	orders, err := h.loyaltyService.GetUserOrders(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -136,4 +134,19 @@ func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(orders)
+}
+
+// GetUserBalance gets user balance
+func (h *Handler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	userBalance, err := h.loyaltyService.GetUserBalance(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(userBalance)
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/google/uuid"
 )
@@ -15,12 +16,16 @@ type Scanner interface {
 type Repository interface {
 	User() UserRepository
 	Order() OrderRepository
+
+	BeginTx(ctx context.Context) (*sql.Tx, error)
 }
 
 // UserRepository interface to work with user repository
 type UserRepository interface {
-	Create(ctx context.Context, login, password string) (*entity.User, error)
+	CreateUserWithBalance(ctx context.Context, login, password string) (*entity.User, error)
 	GetByLogin(ctx context.Context, login string) (*entity.User, error)
+	GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error)
+	AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, accrual *float64) error
 }
 
 // OrderRepository interface to work with order repository
@@ -29,5 +34,5 @@ type OrderRepository interface {
 	GetByNumber(ctx context.Context, number string) (*entity.Order, error)
 	GetAllByUser(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error)
 	UpdateOrderStatus(ctx context.Context, number string, status entity.OrderStatus) (*entity.Order, error)
-	MarkOrderProcessed(ctx context.Context, number string, accrual *float64) (*entity.Order, error)
+	MarkOrderProcessedTx(ctx context.Context, tx *sql.Tx, number string, accrual *float64) (*entity.Order, error)
 }

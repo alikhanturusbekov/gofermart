@@ -31,7 +31,7 @@ func (s *AuthService) Register(ctx context.Context, login, password string) (str
 	}
 
 	// Adds user to the database
-	user, err := s.repository.User().Create(ctx, login, string(passwordHash))
+	user, err := s.repository.User().CreateUserWithBalance(ctx, login, string(passwordHash))
 	if err != nil {
 		return "", err
 	}
