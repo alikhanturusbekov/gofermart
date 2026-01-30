@@ -99,10 +99,7 @@ func (r *OrderRepository) MarkOrderProcessedTx(ctx context.Context, tx *sql.Tx, 
 }
 
 // GetAllByUser gets all orders by user
-func (r *OrderRepository) GetAllByUser(
-	ctx context.Context,
-	userID uuid.UUID,
-) ([]*entity.Order, error) {
+func (r *OrderRepository) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error) {
 	query := `
 		SELECT id, user_id, number, status, accrual, uploaded_at
 		FROM orders

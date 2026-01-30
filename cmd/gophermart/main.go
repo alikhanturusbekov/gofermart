@@ -79,6 +79,10 @@ func setupRouter(appConfig *setup.Config, handler *handler.Handler) *chi.Mux {
 
 		// Balance
 		r.Get("/api/user/balance", handler.GetUserBalance)
+
+		// Withdrawals
+		r.Get("/api/user/withdrawals", handler.GetUserWithdrawals)
+		r.Post("/api/user/withdraw", handler.Withdraw)
 	})
 
 	return r

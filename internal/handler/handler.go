@@ -150,3 +150,53 @@ func (h *Handler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(userBalance)
 }
+
+// Withdraw gets points from balance for specific order
+func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	var request struct {
+		Order string  `json:"order"`
+		Sum   float64 `json:"sum"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validates order number
+	if valid := validation.ValidateOrderNumber(request.Order); !valid {
+		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
+		return
+	}
+
+	// Withdraws from user balance
+	err := h.loyaltyService.Withdraw(r.Context(), userID, request.Order, request.Sum)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// GetUserWithdrawals gets all withdrawals owned by user
+func (h *Handler) GetUserWithdrawals(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	withdrawals, err := h.loyaltyService.GetUserWithdrawals(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(withdrawals) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(withdrawals)
+}

@@ -103,6 +103,17 @@ func (r *UserRepository) AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userI
 	return err
 }
 
+// SubtractUserBalanceTx subtract points from the user balance
+func (r *UserRepository) SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, withdrawalAmount float64) error {
+	query := `
+		UPDATE user_balances 
+		SET current = current - $1, withdrawn = withdrawn + $1 
+		WHERE user_id = $2
+		RETURNING user_id, user_balances.current, withdrawn`
+	_, err := tx.ExecContext(ctx, query, withdrawalAmount, userID)
+	return err
+}
+
 // scanUser gets user entity from row
 func (r *UserRepository) scanUser(s repository.Scanner, user *entity.User) error {
 	return s.Scan(

@@ -55,9 +55,60 @@ func (s *LoyaltyService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([
 
 // GetUserBalance gets user balance
 func (s *LoyaltyService) GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error) {
-	orders, err := s.repository.User().GetUserBalance(ctx, userID)
+	userBalance, err := s.repository.User().GetUserBalance(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return orders, nil
+	return userBalance, nil
+}
+
+// Withdraw withdraws points from user balance
+func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, withdrawalAmount float64) error {
+	// Gets user balance
+	userBalance, err := s.repository.User().GetUserBalance(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Compares withdrawal amount and balance
+	if userBalance.Current < withdrawalAmount {
+		return err
+	}
+
+	// Begins transaction
+	tx, err := s.repository.BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Subtract withdrawal from balance
+	err = s.repository.User().SubtractUserBalanceTx(ctx, tx, userID, withdrawalAmount)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Create withdrawal record
+	_, err = s.repository.Withdrawal().CreateTx(ctx, tx, userID, orderNumber, withdrawalAmount)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetUserWithdrawals gets user withdrawals
+func (s *LoyaltyService) GetUserWithdrawals(ctx context.Context, userID uuid.UUID) ([]*entity.Withdrawal, error) {
+	withdrawals, err := s.repository.Withdrawal().GetAllByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return withdrawals, nil
 }

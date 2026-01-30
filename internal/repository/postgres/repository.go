@@ -28,6 +28,11 @@ func (r *Repository) Order() repository.OrderRepository {
 	return &OrderRepository{database: r.database}
 }
 
+// Withdrawal returns withdrawals repository
+func (r *Repository) Withdrawal() repository.WithdrawalRepository {
+	return &WithdrawalRepository{database: r.database}
+}
+
 // BeginTx begins transaction
 func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {
 	return r.database.BeginTx(ctx, nil)
