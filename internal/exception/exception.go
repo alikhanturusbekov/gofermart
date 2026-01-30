@@ -10,4 +10,6 @@ var (
 
 	ErrOrderExistsByUser  = fmt.Errorf("order already exists for this user")
 	ErrOrderExistsByOther = fmt.Errorf("order already exists for another user")
+
+	ErrNotEnoughBalance = errors.New("not enough balance")
 )

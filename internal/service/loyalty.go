@@ -72,7 +72,7 @@ func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNu
 
 	// Compares withdrawal amount and balance
 	if userBalance.Current < withdrawalAmount {
-		return err
+		return exception.ErrNotEnoughBalance
 	}
 
 	// Begins transaction

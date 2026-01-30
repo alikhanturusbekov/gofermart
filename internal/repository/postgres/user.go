@@ -96,7 +96,7 @@ func (r *UserRepository) GetUserBalance(ctx context.Context, userID uuid.UUID) (
 func (r *UserRepository) AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, accrual *float64) error {
 	query := `
 		UPDATE user_balances 
-		SET current = current + $1 
+		SET current = current + $1, updated_at = now()
 		WHERE user_id = $2
 		RETURNING user_id, user_balances.current, withdrawn`
 	_, err := tx.ExecContext(ctx, query, accrual, userID)
@@ -107,7 +107,7 @@ func (r *UserRepository) AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userI
 func (r *UserRepository) SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, withdrawalAmount float64) error {
 	query := `
 		UPDATE user_balances 
-		SET current = current - $1, withdrawn = withdrawn + $1 
+		SET current = current - $1, withdrawn = withdrawn + $1, updated_at = now()
 		WHERE user_id = $2
 		RETURNING user_id, user_balances.current, withdrawn`
 	_, err := tx.ExecContext(ctx, query, withdrawalAmount, userID)

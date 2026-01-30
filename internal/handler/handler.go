@@ -174,8 +174,14 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	// Withdraws from user balance
 	err := h.loyaltyService.Withdraw(r.Context(), userID, request.Order, request.Sum)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		switch {
+		case errors.Is(err, exception.ErrNotEnoughBalance):
+			w.WriteHeader(http.StatusPaymentRequired)
+			return
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
