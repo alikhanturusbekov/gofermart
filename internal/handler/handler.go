@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/exception"
+	"github.com/alikhanturusbekov/gofermart/internal/middleware"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/validation"
 	"github.com/google/uuid"
@@ -79,7 +80,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	// Gets userID from token
-	userID := r.Context().Value("userID").(uuid.UUID)
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
 	// Reads order number
 	body, err := io.ReadAll(r.Body)
