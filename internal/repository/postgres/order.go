@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/exception"
@@ -45,7 +46,11 @@ func (or *OrderRepository) GetByNumber(ctx context.Context, number string) (*ent
 	order := &entity.Order{}
 	err := or.scanOrder(or.database.QueryRowContext(ctx, query, number), order)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user by login: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("failed to get order by number: %w", err)
 	}
 
 	return order, nil
