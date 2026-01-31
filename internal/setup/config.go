@@ -58,7 +58,7 @@ func LoadConfig() (*Config, error) {
 // validate validates that the config is acceptable
 func (c *Config) validate() error {
 	if (c.RunAddress == "") || (c.DatabaseURI == "") || (c.AccrualSystemAddress == "") || (c.AuthSecretKey == "") {
-		return errors.New("must specify all configs: run_address, database_dsn")
+		return errors.New("must specify all configs: run_address, database_uri, accrual_system_address, auth_secret_key")
 	}
 
 	return nil

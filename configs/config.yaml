@@ -2,4 +2,4 @@
 run_address: :8080
 database_uri: postgres://postgres:postgres@localhost:5432/gofermart
 accrual_system_address: http://localhost:8081
-authentication_secret_key: super-secret-key
+auth_secret_key: super-secret-key
