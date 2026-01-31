@@ -135,10 +135,6 @@ func (w *OrderProcessWorker) processOrder(ctx context.Context, task entity.Order
 		w.retryLater(task, delay)
 
 	default:
-		_, err = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
-		if err != nil {
-			return
-		}
 	}
 }
 
