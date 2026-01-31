@@ -9,6 +9,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type LoyaltyServiceInterface interface {
+	UploadOrder(ctx context.Context, userID uuid.UUID, number string) error
+	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error)
+	GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error)
+	Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, withdrawalAmount float64) error
+	GetUserWithdrawals(ctx context.Context, userID uuid.UUID) ([]*entity.Withdrawal, error)
+}
+
 type LoyaltyService struct {
 	repository         repository.Repository
 	orderProcessWorker worker.OrderProcessor

@@ -14,12 +14,12 @@ import (
 )
 
 type Handler struct {
-	authService    *service.AuthService
-	loyaltyService *service.LoyaltyService
+	authService    service.AuthServiceInterface
+	loyaltyService service.LoyaltyServiceInterface
 }
 
 // NewHandler gets new main handler
-func NewHandler(authService *service.AuthService, loyaltyService *service.LoyaltyService) *Handler {
+func NewHandler(authService service.AuthServiceInterface, loyaltyService service.LoyaltyServiceInterface) *Handler {
 	return &Handler{
 		authService:    authService,
 		loyaltyService: loyaltyService,

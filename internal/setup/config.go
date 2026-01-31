@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-const (
+var (
 	configFilePath = "configs/config.yaml"
 )
 
@@ -57,7 +57,7 @@ func LoadConfig() (*Config, error) {
 
 // validate validates that the config is acceptable
 func (c *Config) validate() error {
-	if (c.RunAddress == "") || (c.DatabaseURI == "") {
+	if (c.RunAddress == "") || (c.DatabaseURI == "") || (c.AccrualSystemAddress == "") || (c.AuthSecretKey == "") {
 		return errors.New("must specify all configs: run_address, database_dsn")
 	}
 

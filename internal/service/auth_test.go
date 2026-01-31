@@ -12,6 +12,8 @@ import (
 	"testing"
 )
 
+// Mocking repositories
+
 type mockUserRepository struct {
 	createUser func(ctx context.Context, login, password string) (*entity.User, error)
 	getByLogin func(ctx context.Context, login string) (*entity.User, error)
@@ -75,6 +77,8 @@ func (m *mockRepository) Withdrawal() repository.WithdrawalRepository {
 func (m *mockRepository) BeginTx(ctx context.Context) (*sql.Tx, error) {
 	panic("BeginTx() not used in auth service test")
 }
+
+// Tests start here
 
 func TestAuthService_Register_Success(t *testing.T) {
 	userID := uuid.New()

@@ -35,7 +35,7 @@ func (m *MockUserRepo) GetUserBalance(ctx context.Context, userID uuid.UUID) (*e
 	return b, nil
 }
 func (m *MockUserRepo) AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, accrual *float64) error {
-	b, _ := m.balances[userID]
+	b := m.balances[userID]
 	if accrual != nil {
 		b.Current += *accrual
 	}
