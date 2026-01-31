@@ -125,7 +125,7 @@ func (w *OrderProcessWorker) processOrder(ctx context.Context, task entity.Order
 		}
 
 	case http.StatusNoContent:
-		_, err = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
+		_, err = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusNew)
 		if err != nil {
 			return
 		}
