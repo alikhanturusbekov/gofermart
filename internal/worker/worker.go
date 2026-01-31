@@ -7,6 +7,8 @@ import (
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 const (
@@ -88,8 +90,11 @@ func (w *OrderProcessWorker) processOrder(ctx context.Context, task entity.Order
 			return
 		}
 
-		if result.Status == string(entity.StatusRegistered) {
-			_, _ = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
+		if result.Status == string(entity.StatusInvalid) {
+			_, err = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
+			if err != nil {
+				return
+			}
 		}
 
 		if result.Status == string(entity.StatusProcessed) {
@@ -113,21 +118,54 @@ func (w *OrderProcessWorker) processOrder(ctx context.Context, task entity.Order
 
 			err = tx.Commit()
 			if err != nil {
+				tx.Rollback()
+				_, _ = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
 				return
 			}
 		}
 
-		if result.Status == string(entity.StatusInvalid) {
-			_, _ = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
+	case http.StatusNoContent:
+		_, err = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
+		if err != nil {
+			return
 		}
 
-	case http.StatusNoContent:
-		_, _ = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusNew)
-
 	case http.StatusTooManyRequests:
-		retryAfter := resp.Header.Get("Retry-After")
-		_ = retryAfter
+		delay := parseRetryAfter(resp.Header.Get("Retry-After"))
+		w.retryLater(task, delay)
 
 	default:
+		_, err = w.repository.Order().UpdateOrderStatus(ctx, order.Number, entity.StatusInvalid)
+		if err != nil {
+			return
+		}
 	}
+}
+
+// parseRetryAfter gets time after which order look up must be retried
+func parseRetryAfter(value string) time.Duration {
+	if value == "" {
+		return time.Second
+	}
+
+	if seconds, err := strconv.Atoi(value); err == nil {
+		return time.Duration(seconds) * time.Second
+	}
+
+	if t, err := http.ParseTime(value); err == nil {
+		d := time.Until(t)
+		if d > 0 {
+			return d
+		}
+	}
+
+	return time.Second
+}
+
+// retryLater sends order process task after waiting time duration
+func (w *OrderProcessWorker) retryLater(task entity.OrderProcessTask, delay time.Duration) {
+	go func() {
+		time.Sleep(delay)
+		w.Enqueue(task)
+	}()
 }

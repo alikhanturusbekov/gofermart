@@ -25,5 +25,5 @@ type Order struct {
 }
 
 type OrderProcessTask struct {
-	Number string `json:"order_id"`
+	Number string
 }
