@@ -11,11 +11,11 @@ import (
 
 type LoyaltyService struct {
 	repository         repository.Repository
-	orderProcessWorker *worker.OrderProcessWorker
+	orderProcessWorker worker.OrderProcessor
 }
 
 // NewLoyaltyService creates service to work with orders and withdrawals
-func NewLoyaltyService(repository repository.Repository, orderProcessWorker *worker.OrderProcessWorker) *LoyaltyService {
+func NewLoyaltyService(repository repository.Repository, orderProcessWorker worker.OrderProcessor) *LoyaltyService {
 	return &LoyaltyService{repository: repository, orderProcessWorker: orderProcessWorker}
 }
 
@@ -80,7 +80,9 @@ func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNu
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	if tx != nil {
+		defer tx.Rollback()
+	}
 
 	// Subtract withdrawal from balance
 	err = s.repository.User().SubtractUserBalanceTx(ctx, tx, userID, withdrawalAmount)
@@ -96,9 +98,11 @@ func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNu
 		return err
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		return err
+	if tx != nil {
+		err = tx.Commit()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

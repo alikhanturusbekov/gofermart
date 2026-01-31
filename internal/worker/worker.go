@@ -15,6 +15,10 @@ const (
 	DefaultBufferSize = 500
 )
 
+type OrderProcessor interface {
+	Enqueue(task entity.OrderProcessTask)
+}
+
 type OrderProcessWorker struct {
 	repository repository.Repository
 	client     *client.Client
