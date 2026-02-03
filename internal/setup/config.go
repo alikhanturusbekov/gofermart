@@ -18,9 +18,15 @@ type Config struct {
 	AuthSecretKey        string `yaml:"auth_secret_key"`
 }
 
+const (
+	defaultAuthSecretKey = "super-secret-key"
+)
+
 // LoadConfig loads application configuration
 func LoadConfig() (*Config, error) {
-	config := Config{}
+	config := Config{
+		AuthSecretKey: defaultAuthSecretKey,
+	}
 
 	// Try loading configuration file
 	data, err := os.ReadFile(configFilePath)
