@@ -15,11 +15,8 @@ const (
 	DefaultBufferSize = 500
 )
 
-type OrderProcessor interface {
-	Enqueue(task entity.OrderProcessTask)
-}
-
-type OrderProcessWorker struct {
+// OrderProcessor processes user orders
+type OrderProcessor struct {
 	repository repository.Repository
 	client     *client.Client
 	in         chan entity.OrderProcessTask
@@ -29,19 +26,19 @@ func NewOrderProcessWorker(
 	repository repository.Repository,
 	client *client.Client,
 	bufferSize int,
-) *OrderProcessWorker {
-	return &OrderProcessWorker{
+) *OrderProcessor {
+	return &OrderProcessor{
 		repository: repository,
 		client:     client,
 		in:         make(chan entity.OrderProcessTask, bufferSize),
 	}
 }
 
-func (w *OrderProcessWorker) Enqueue(task entity.OrderProcessTask) {
+func (w *OrderProcessor) Enqueue(task entity.OrderProcessTask) {
 	w.in <- task
 }
 
-func (w *OrderProcessWorker) Run(ctx context.Context) {
+func (w *OrderProcessor) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -53,7 +50,7 @@ func (w *OrderProcessWorker) Run(ctx context.Context) {
 	}
 }
 
-func (w *OrderProcessWorker) processOrder(ctx context.Context, task entity.OrderProcessTask) {
+func (w *OrderProcessor) processOrder(ctx context.Context, task entity.OrderProcessTask) {
 	order, err := w.repository.Order().GetByNumber(ctx, task.Number)
 	if err != nil || order == nil {
 		return
@@ -163,7 +160,7 @@ func parseRetryAfter(value string) time.Duration {
 }
 
 // retryLater sends order process task after waiting time duration
-func (w *OrderProcessWorker) retryLater(task entity.OrderProcessTask, delay time.Duration) {
+func (w *OrderProcessor) retryLater(task entity.OrderProcessTask, delay time.Duration) {
 	go func() {
 		time.Sleep(delay)
 		w.Enqueue(task)

@@ -1,24 +1,42 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/middleware/auth"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/validation"
+	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"strings"
 )
 
+// AuthService to work with authentication
+type AuthService interface {
+	Register(ctx context.Context, login, password string) (string, error)
+	Login(ctx context.Context, login, password string) (string, error)
+}
+
+// LoyaltyService to work with orders, bonuses and withdrawals
+type LoyaltyService interface {
+	UploadOrder(ctx context.Context, userID uuid.UUID, number string) error
+	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error)
+	GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error)
+	Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, withdrawalAmount float64) error
+	GetUserWithdrawals(ctx context.Context, userID uuid.UUID) ([]*entity.Withdrawal, error)
+}
+
 type Handler struct {
-	authService    service.AuthServiceInterface
-	loyaltyService service.LoyaltyServiceInterface
+	authService    AuthService
+	loyaltyService LoyaltyService
 }
 
 // NewHandler gets new main handler
-func NewHandler(authService service.AuthServiceInterface, loyaltyService service.LoyaltyServiceInterface) *Handler {
+func NewHandler(authService AuthService, loyaltyService LoyaltyService) *Handler {
 	return &Handler{
 		authService:    authService,
 		loyaltyService: loyaltyService,

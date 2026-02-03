@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
-	"github.com/alikhanturusbekov/gofermart/internal/worker"
 	"github.com/google/uuid"
 )
 
@@ -16,22 +15,19 @@ var (
 	ErrNotEnoughBalance   = errors.New("not enough balance")
 )
 
-type LoyaltyServiceInterface interface {
-	UploadOrder(ctx context.Context, userID uuid.UUID, number string) error
-	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error)
-	GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error)
-	Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, withdrawalAmount float64) error
-	GetUserWithdrawals(ctx context.Context, userID uuid.UUID) ([]*entity.Withdrawal, error)
+// OrderProcessor processes user orders
+type OrderProcessor interface {
+	Enqueue(task entity.OrderProcessTask)
 }
 
+// LoyaltyService service to work with orders, bonuses and withdrawals
 type LoyaltyService struct {
-	repository         repository.Repository
-	orderProcessWorker worker.OrderProcessor
+	repository     repository.Repository
+	orderProcessor OrderProcessor
 }
 
-// NewLoyaltyService creates service to work with orders and withdrawals
-func NewLoyaltyService(repository repository.Repository, orderProcessWorker worker.OrderProcessor) *LoyaltyService {
-	return &LoyaltyService{repository: repository, orderProcessWorker: orderProcessWorker}
+func NewLoyaltyService(repository repository.Repository, orderProcessor OrderProcessor) *LoyaltyService {
+	return &LoyaltyService{repository: repository, orderProcessor: orderProcessor}
 }
 
 func (s *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, number string) error {
@@ -54,7 +50,7 @@ func (s *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, numb
 		return err
 	}
 
-	s.orderProcessWorker.Enqueue(entity.OrderProcessTask{Number: number})
+	s.orderProcessor.Enqueue(entity.OrderProcessTask{Number: number})
 
 	return nil
 }
