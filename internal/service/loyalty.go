@@ -16,10 +16,6 @@ var (
 	ErrNotEnoughBalance   = errors.New("not enough balance")
 )
 
-const (
-	KEK = 1
-)
-
 type LoyaltyServiceInterface interface {
 	UploadOrder(ctx context.Context, userID uuid.UUID, number string) error
 	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error)

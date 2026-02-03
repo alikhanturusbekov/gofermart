@@ -1,4 +1,4 @@
-package middleware
+package auth
 
 import (
 	"net/http"
@@ -15,7 +15,7 @@ func TestAuthMiddleware(t *testing.T) {
 	// A handler that just writes "ok"
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		if ctxUserID := r.Context().Value(UserIDKey); ctxUserID == nil {
+		if _, ok := UserIDFromContext(r.Context()); !ok {
 			t.Error("userID not set in context")
 		}
 	})

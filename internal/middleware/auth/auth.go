@@ -1,4 +1,4 @@
-package middleware
+package auth
 
 import (
 	"context"
@@ -12,8 +12,23 @@ import (
 // contextKey private type for context keys
 type contextKey string
 
-// UserIDKey context key for current user's ID
+type userIDContextKey struct{}
+
+var userIDKey = userIDContextKey{}
+
+// UserIDKey context key for current user ID
 const UserIDKey contextKey = "userID"
+
+// WithUserID adds userID to context
+func WithUserID(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
+
+// UserIDFromContext gets userID from context
+func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
+	userID, ok := ctx.Value(userIDKey).(uuid.UUID)
+	return userID, ok
+}
 
 // AuthMiddleware to enforce the authentication of the user
 func AuthMiddleware(secretKey string) func(http.Handler) http.Handler {
@@ -71,7 +86,7 @@ func AuthMiddleware(secretKey string) func(http.Handler) http.Handler {
 			}
 
 			// Stores userID in context
-			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx := WithUserID(r.Context(), userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

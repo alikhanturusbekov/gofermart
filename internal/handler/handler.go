@@ -3,11 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"github.com/alikhanturusbekov/gofermart/internal/middleware"
+	"github.com/alikhanturusbekov/gofermart/internal/middleware/auth"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/validation"
-	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"strings"
@@ -80,8 +79,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 // UploadOrder uploads an order for user
 func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
-	// Gets userID from token
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	// Gets userID from context
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}
 
 	// Reads order number
 	body, err := io.ReadAll(r.Body)
@@ -118,7 +120,10 @@ func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 
 // GetUserOrders gets all orders owned by user
 func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}
 
 	orders, err := h.loyaltyService.GetUserOrders(r.Context(), userID)
 	if err != nil {
@@ -138,7 +143,10 @@ func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 
 // GetUserBalance gets user balance
 func (h *Handler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}
 
 	userBalance, err := h.loyaltyService.GetUserBalance(r.Context(), userID)
 	if err != nil {
@@ -153,7 +161,10 @@ func (h *Handler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 
 // Withdraw gets points from balance for specific order
 func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}
 
 	var request struct {
 		Order string  `json:"order"`
@@ -189,7 +200,10 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 
 // GetUserWithdrawals gets all withdrawals owned by user
 func (h *Handler) GetUserWithdrawals(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}
 
 	withdrawals, err := h.loyaltyService.GetUserWithdrawals(r.Context(), userID)
 	if err != nil {

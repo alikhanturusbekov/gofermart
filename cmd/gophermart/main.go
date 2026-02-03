@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/alikhanturusbekov/gofermart/internal/client"
 	"github.com/alikhanturusbekov/gofermart/internal/handler"
-	"github.com/alikhanturusbekov/gofermart/internal/middleware"
+	"github.com/alikhanturusbekov/gofermart/internal/middleware/auth"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/setup"
@@ -71,7 +71,7 @@ func setupRouter(appConfig *setup.Config, handler *handler.Handler) *chi.Mux {
 
 	// Requires authentication
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(appConfig.AuthSecretKey))
+		r.Use(auth.AuthMiddleware(appConfig.AuthSecretKey))
 
 		// Orders
 		r.Get("/api/user/orders", handler.GetUserOrders)
