@@ -9,15 +9,10 @@ import (
 	"strings"
 )
 
-// contextKey private type for context keys
-type contextKey string
-
+// userIDContextKey exclusive type for userID key in context
 type userIDContextKey struct{}
 
 var userIDKey = userIDContextKey{}
-
-// UserIDKey context key for current user ID
-const UserIDKey contextKey = "userID"
 
 // WithUserID adds userID to context
 func WithUserID(ctx context.Context, userID uuid.UUID) context.Context {
