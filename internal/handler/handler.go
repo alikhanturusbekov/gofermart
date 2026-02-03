@@ -3,8 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/middleware"
+	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/validation"
 	"github.com/google/uuid"
@@ -41,7 +41,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	token, err := h.authService.Register(r.Context(), request.Login, request.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, exception.ErrRecordExists):
+		case errors.Is(err, postgres.ErrUserAlreadyExists):
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		default:
@@ -101,10 +101,10 @@ func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	err = h.loyaltyService.UploadOrder(r.Context(), userID, orderNumber)
 	if err != nil {
 		switch {
-		case errors.Is(err, exception.ErrOrderExistsByUser):
+		case errors.Is(err, service.ErrOrderExistsByUser):
 			w.WriteHeader(http.StatusOK)
 			return
-		case errors.Is(err, exception.ErrOrderExistsByOther):
+		case errors.Is(err, service.ErrOrderExistsByOther):
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		default:
@@ -175,7 +175,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	err := h.loyaltyService.Withdraw(r.Context(), userID, request.Order, request.Sum)
 	if err != nil {
 		switch {
-		case errors.Is(err, exception.ErrNotEnoughBalance):
+		case errors.Is(err, service.ErrNotEnoughBalance):
 			w.WriteHeader(http.StatusPaymentRequired)
 			return
 		default:

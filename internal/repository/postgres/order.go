@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
-	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/google/uuid"
+)
+
+var (
+	ErrOrderAlreadyExists = fmt.Errorf("order already exists")
 )
 
 type OrderRepository struct {
@@ -27,7 +30,7 @@ func (r *OrderRepository) Create(ctx context.Context, userID uuid.UUID, number s
 	err := r.scanOrder(r.database.QueryRowContext(ctx, query, userID, number, entity.StatusNew), order)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return nil, exception.ErrRecordExists
+			return nil, ErrOrderAlreadyExists
 		}
 		return nil, fmt.Errorf("failed to create order: %w", err)
 	}

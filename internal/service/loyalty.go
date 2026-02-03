@@ -2,11 +2,22 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
-	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/alikhanturusbekov/gofermart/internal/worker"
 	"github.com/google/uuid"
+)
+
+var (
+	ErrOrderExistsByUser  = fmt.Errorf("order already exists for this user")
+	ErrOrderExistsByOther = fmt.Errorf("order already exists for another user")
+	ErrNotEnoughBalance   = errors.New("not enough balance")
+)
+
+const (
+	KEK = 1
 )
 
 type LoyaltyServiceInterface interface {
@@ -36,9 +47,9 @@ func (s *LoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, numb
 	// If order already exists check the owner
 	if existingOrder != nil {
 		if existingOrder.UserID == userID {
-			return exception.ErrOrderExistsByUser
+			return ErrOrderExistsByUser
 		} else {
-			return exception.ErrOrderExistsByOther
+			return ErrOrderExistsByOther
 		}
 	}
 
@@ -80,7 +91,7 @@ func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNu
 
 	// Compares withdrawal amount and balance
 	if userBalance.Current < withdrawalAmount {
-		return exception.ErrNotEnoughBalance
+		return ErrNotEnoughBalance
 	}
 
 	// Begins transaction

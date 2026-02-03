@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
-	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/handler"
 	"github.com/alikhanturusbekov/gofermart/internal/middleware"
+	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
+	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
@@ -70,7 +71,7 @@ func TestRegister(t *testing.T) {
 	mockAuth := &MockAuthService{
 		RegisterFn: func(ctx context.Context, login, password string) (string, error) {
 			if login == "exists" {
-				return "", exception.ErrRecordExists
+				return "", postgres.ErrUserAlreadyExists
 			}
 			return "token", nil
 		},
@@ -145,9 +146,9 @@ func TestUploadOrder(t *testing.T) {
 	mockLoyalty := &MockLoyaltyService{
 		UploadOrderFn: func(ctx context.Context, uid uuid.UUID, number string) error {
 			if number == "4111111111111111" {
-				return exception.ErrOrderExistsByUser
+				return service.ErrOrderExistsByUser
 			} else if number == "4222222222222" {
-				return exception.ErrOrderExistsByOther
+				return service.ErrOrderExistsByOther
 			}
 			return nil
 		},
@@ -239,7 +240,7 @@ func TestWithdraw(t *testing.T) {
 	mockLoyalty := &MockLoyaltyService{
 		WithdrawFn: func(ctx context.Context, uid uuid.UUID, order string, sum float64) error {
 			if sum > 50 {
-				return exception.ErrNotEnoughBalance
+				return service.ErrNotEnoughBalance
 			}
 			return nil
 		},

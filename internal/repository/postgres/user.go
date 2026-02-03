@@ -5,9 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
-	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/google/uuid"
+)
+
+var (
+	ErrUserAlreadyExists = fmt.Errorf("user already exists")
 )
 
 // UserRepository implementation with database
@@ -34,7 +37,7 @@ func (r *UserRepository) CreateUserWithBalance(ctx context.Context, login, passw
 	if err != nil {
 		tx.Rollback()
 		if isUniqueViolation(err) {
-			return nil, exception.ErrRecordExists
+			return nil, ErrUserAlreadyExists
 		}
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}

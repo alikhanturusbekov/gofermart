@@ -9,7 +9,6 @@ import (
 	"database/sql"
 
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
-	"github.com/alikhanturusbekov/gofermart/internal/exception"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/google/uuid"
 )
@@ -44,7 +43,7 @@ func (m *MockUserRepo) AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userID 
 func (m *MockUserRepo) SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, withdrawalAmount float64) error {
 	b, ok := m.balances[userID]
 	if !ok || b.Current < withdrawalAmount {
-		return exception.ErrNotEnoughBalance
+		return ErrNotEnoughBalance
 	}
 	b.Current -= withdrawalAmount
 	b.Withdrawn += withdrawalAmount
@@ -139,13 +138,13 @@ func TestLoyaltyService_UploadOrder(t *testing.T) {
 
 	// Upload same order again by same user -> ErrOrderExistsByUser
 	err = service.UploadOrder(ctx, userID, "ORD1")
-	if !errors.Is(err, exception.ErrOrderExistsByUser) {
+	if !errors.Is(err, ErrOrderExistsByUser) {
 		t.Fatal("expected ErrOrderExistsByUser")
 	}
 
 	// Upload same order by different user -> ErrOrderExistsByOther
 	err = service.UploadOrder(ctx, uuid.New(), "ORD1")
-	if !errors.Is(err, exception.ErrOrderExistsByOther) {
+	if !errors.Is(err, ErrOrderExistsByOther) {
 		t.Fatal("expected ErrOrderExistsByOther")
 	}
 }
@@ -194,7 +193,7 @@ func TestLoyaltyService_Withdraw(t *testing.T) {
 
 	// Withdraw more than balance
 	err := service.Withdraw(ctx, userID, "ORD999", 100)
-	if !errors.Is(err, exception.ErrNotEnoughBalance) {
+	if !errors.Is(err, ErrNotEnoughBalance) {
 		t.Fatal("expected ErrNotEnoughBalance")
 	}
 
