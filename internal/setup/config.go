@@ -22,13 +22,13 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	config := Config{}
 
-	// Load configuration file
+	// Try loading configuration file
 	data, err := os.ReadFile(configFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = yaml.Unmarshal(data, &config); err != nil {
+	if err == nil {
+		if err := yaml.Unmarshal(data, &config); err != nil {
+			return nil, err
+		}
+	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
 
