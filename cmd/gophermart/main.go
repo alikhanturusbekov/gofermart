@@ -10,22 +10,25 @@ import (
 	"github.com/alikhanturusbekov/gofermart/internal/setup"
 	"github.com/alikhanturusbekov/gofermart/internal/worker"
 	"github.com/go-chi/chi/v5"
+	"github.com/pkg/errors"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
 	if err := run(); err != nil {
 		log.Printf("Error while starting the app: %s", err)
-
 		os.Exit(1)
 	}
 }
 
 func run() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	// Gets the application config
 	appConfig, err := setup.LoadConfig()
@@ -46,20 +49,58 @@ func run() error {
 	// Setups client
 	accrualClient := client.NewClient(appConfig.AccrualSystemAddress, client.DefaultTimeout)
 
-	// Setups worker
-	orderProcessWorker := worker.NewOrderProcessWorker(repository, accrualClient, worker.DefaultBufferSize)
-	go orderProcessWorker.Run(ctx)
+	// Setups workers
+	orderProcessor := worker.NewOrderProcessWorker(
+		repository,
+		accrualClient,
+		worker.DefaultBufferSize,
+		worker.DefaultWorkers,
+	)
+	go orderProcessor.Run(ctx)
 
 	// Setups services
 	authService := service.NewAuthService(repository, appConfig.AuthSecretKey)
-	loyaltyService := service.NewLoyaltyService(repository, orderProcessWorker)
+	loyaltyService := service.NewLoyaltyService(repository, orderProcessor)
 
 	// Setups handler and router
 	mainHandler := handler.NewHandler(authService, loyaltyService)
 	r := setupRouter(appConfig, mainHandler)
 
-	// Serves the Application
-	return http.ListenAndServe(appConfig.RunAddress, r)
+	// Setups the HTTP server
+	srv := &http.Server{
+		Addr:    appConfig.RunAddress,
+		Handler: r,
+	}
+
+	// Start server
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- srv.ListenAndServe()
+	}()
+
+	// Wait for signal or server error
+	select {
+	case <-ctx.Done():
+		log.Println("shutdown signal received")
+	case err := <-serverErr:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+	}
+
+	// Graceful shutdown for server
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("server shutdown error: %v", err)
+	}
+
+	// Graceful shutdown for workers
+	orderProcessor.Shutdown()
+
+	log.Println("application stopped gracefully")
+	return nil
 }
 
 func setupRouter(appConfig *setup.Config, handler *handler.Handler) *chi.Mux {
