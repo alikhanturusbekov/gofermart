@@ -113,7 +113,6 @@ func (r *UserRepository) SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, 
 		SET current = current - $1, withdrawn = withdrawn + $1, updated_at = now()
 		WHERE user_id = $2 AND current >= $1
 		RETURNING user_id, user_balances.current, withdrawn`
-	_, err := tx.ExecContext(ctx, query, withdrawalAmount, userID)
 
 	res, err := tx.ExecContext(ctx, query, withdrawalAmount, userID)
 	if err != nil {
