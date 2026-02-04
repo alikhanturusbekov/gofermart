@@ -131,7 +131,7 @@ func (w *OrderProcessor) processOrder(ctx context.Context, task entity.OrderProc
 		return
 	}
 
-	resp, err := w.client.Client.Do(req)
+	resp, err := w.client.Client.Do(ctx, req)
 	if err != nil {
 		return
 	}

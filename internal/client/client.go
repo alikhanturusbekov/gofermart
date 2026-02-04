@@ -11,14 +11,18 @@ const (
 
 type Client struct {
 	BaseURL string
-	Client  *http.Client
+	Client  *RetryClient
 }
 
 func NewClient(baseURL string, timeout time.Duration) *Client {
+	baseClient := &http.Client{
+		Timeout: timeout,
+	}
+
+	retryClient := NewRetryClient(baseClient, defaultMaxRetries, defaultRetryDelay)
+
 	return &Client{
 		BaseURL: baseURL,
-		Client: &http.Client{
-			Timeout: timeout,
-		},
+		Client:  retryClient,
 	}
 }
