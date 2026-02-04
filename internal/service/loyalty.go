@@ -75,17 +75,6 @@ func (s *LoyaltyService) GetUserBalance(ctx context.Context, userID uuid.UUID) (
 
 // Withdraw withdraws points from user balance
 func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, withdrawalAmount float64) error {
-	// Gets user balance
-	userBalance, err := s.repository.User().GetUserBalance(ctx, userID)
-	if err != nil {
-		return err
-	}
-
-	// Compares withdrawal amount and balance
-	if userBalance.Current < withdrawalAmount {
-		return ErrNotEnoughBalance
-	}
-
 	// Begins transaction
 	tx, err := s.repository.BeginTx(ctx)
 	if err != nil {
@@ -96,10 +85,13 @@ func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNu
 	}
 
 	// Subtract withdrawal from balance
-	err = s.repository.User().SubtractUserBalanceTx(ctx, tx, userID, withdrawalAmount)
+	ok, err := s.repository.User().SubtractUserBalanceTx(ctx, tx, userID, withdrawalAmount)
 	if err != nil {
 		tx.Rollback()
 		return err
+	}
+	if !ok {
+		return ErrNotEnoughBalance
 	}
 
 	// Create withdrawal record

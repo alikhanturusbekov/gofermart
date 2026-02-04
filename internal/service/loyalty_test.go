@@ -40,14 +40,14 @@ func (m *MockUserRepo) AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userID 
 	}
 	return nil
 }
-func (m *MockUserRepo) SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, withdrawalAmount float64) error {
+func (m *MockUserRepo) SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, withdrawalAmount float64) (bool, error) {
 	b, ok := m.balances[userID]
 	if !ok || b.Current < withdrawalAmount {
-		return ErrNotEnoughBalance
+		return false, nil
 	}
 	b.Current -= withdrawalAmount
 	b.Withdrawn += withdrawalAmount
-	return nil
+	return true, nil
 }
 
 type MockOrderRepo struct {

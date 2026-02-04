@@ -54,8 +54,8 @@ func (m *mockUserRepository) SubtractUserBalanceTx(
 	tx *sql.Tx,
 	userID uuid.UUID,
 	withdrawalAmount float64,
-) error {
-	return errors.New("unexpected call to SubtractUserBalanceTx")
+) (bool, error) {
+	return false, errors.New("unexpected call to SubtractUserBalanceTx")
 }
 
 type mockRepository struct {

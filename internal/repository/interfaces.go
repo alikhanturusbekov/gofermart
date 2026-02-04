@@ -27,7 +27,7 @@ type UserRepository interface {
 	GetByLogin(ctx context.Context, login string) (*entity.User, error)
 	GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error)
 	AddUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, accrual *float64) error
-	SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, withdrawalAmount float64) error
+	SubtractUserBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, withdrawalAmount float64) (bool, error)
 }
 
 // OrderRepository interface to work with orders
