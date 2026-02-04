@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/client"
 	"github.com/alikhanturusbekov/gofermart/internal/handler"
 	"github.com/alikhanturusbekov/gofermart/internal/middleware/auth"
@@ -10,7 +11,6 @@ import (
 	"github.com/alikhanturusbekov/gofermart/internal/setup"
 	"github.com/alikhanturusbekov/gofermart/internal/worker"
 	"github.com/go-chi/chi/v5"
-	"github.com/pkg/errors"
 	"log"
 	"net/http"
 	"os"
