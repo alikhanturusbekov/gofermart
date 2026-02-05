@@ -1,121 +1,48 @@
-package service
+package service_test
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
-	"github.com/alikhanturusbekov/gofermart/internal/repository"
+	"github.com/alikhanturusbekov/gofermart/internal/service"
+	"github.com/alikhanturusbekov/gofermart/internal/service/mocks"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 	"testing"
 )
 
-// Mocking repositories
-
-type mockUserRepository struct {
-	createUser func(ctx context.Context, login, password string) (*entity.User, error)
-	getByLogin func(ctx context.Context, login string) (*entity.User, error)
-}
-
-func (m *mockUserRepository) CreateUserWithBalance(
-	ctx context.Context,
-	login, password string,
-) (*entity.User, error) {
-	return m.createUser(ctx, login, password)
-}
-
-func (m *mockUserRepository) GetByLogin(
-	ctx context.Context,
-	login string,
-) (*entity.User, error) {
-	return m.getByLogin(ctx, login)
-}
-
-func (m *mockUserRepository) GetUserBalance(
-	ctx context.Context,
-	userID uuid.UUID,
-) (*entity.UserBalance, error) {
-	return nil, errors.New("unexpected call to GetUserBalance")
-}
-
-func (m *mockUserRepository) AddUserBalanceTx(
-	ctx context.Context,
-	tx *sql.Tx,
-	userID uuid.UUID,
-	accrual *float64,
-) error {
-	return errors.New("unexpected call to AddUserBalanceTx")
-}
-
-func (m *mockUserRepository) SubtractUserBalanceTx(
-	ctx context.Context,
-	tx *sql.Tx,
-	userID uuid.UUID,
-	withdrawalAmount float64,
-) (bool, error) {
-	return false, errors.New("unexpected call to SubtractUserBalanceTx")
-}
-
-type mockRepository struct {
-	user repository.UserRepository
-}
-
-func (m *mockRepository) User() repository.UserRepository {
-	return m.user
-}
-
-func (m *mockRepository) Order() repository.OrderRepository {
-	panic("Order() not used in auth service test")
-}
-
-func (m *mockRepository) Withdrawal() repository.WithdrawalRepository {
-	panic("Withdrawal() not used in auth service test")
-}
-
-func (m *mockRepository) BeginTx(ctx context.Context) (*sql.Tx, error) {
-	panic("BeginTx() not used in auth service test")
-}
-
-// Tests start here
-
 func TestAuthService_Register_Success(t *testing.T) {
 	userID := uuid.New()
 
-	userRepo := &mockUserRepository{
-		createUser: func(ctx context.Context, login, password string) (*entity.User, error) {
-			require.Equal(t, "test", login)
-			require.NotEmpty(t, password) // hashed password
+	mockUserRepo := mocks.NewUserRepository(t)
+	mockRepo := mocks.NewRepository(t)
+	mockRepo.On("User").Return(mockUserRepo)
 
-			return &entity.User{
-				ID:    userID,
-				Login: login,
-			}, nil
-		},
-	}
+	mockUserRepo.On("CreateUserWithBalance", mock.Anything, "test", mock.Anything).Return(&entity.User{
+		ID:    userID,
+		Login: "test",
+	}, nil)
 
-	repo := &mockRepository{user: userRepo}
-	service := NewAuthService(repo, "secret")
+	svc := service.NewAuthService(mockRepo, "secret")
 
-	token, err := service.Register(context.Background(), "test", "password")
-
+	token, err := svc.Register(context.Background(), "test", "password")
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 }
 
 func TestAuthService_Register_RepoError(t *testing.T) {
-	userRepo := &mockUserRepository{
-		createUser: func(ctx context.Context, login, password string) (*entity.User, error) {
-			return nil, errors.New("db error")
-		},
-	}
+	mockUserRepo := mocks.NewUserRepository(t)
+	mockRepo := mocks.NewRepository(t)
+	mockRepo.On("User").Return(mockUserRepo)
 
-	repo := &mockRepository{user: userRepo}
-	service := NewAuthService(repo, "secret")
+	mockUserRepo.On("CreateUserWithBalance", mock.Anything, "test", mock.Anything).
+		Return(nil, errors.New("db error"))
 
-	token, err := service.Register(context.Background(), "test", "password")
+	svc := service.NewAuthService(mockRepo, "secret")
 
+	token, err := svc.Register(context.Background(), "test", "password")
 	require.Error(t, err)
 	require.Empty(t, token)
 }
@@ -124,37 +51,33 @@ func TestAuthService_Login_Success(t *testing.T) {
 	password := "password"
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	userRepo := &mockUserRepository{
-		getByLogin: func(ctx context.Context, login string) (*entity.User, error) {
-			return &entity.User{
-				ID:       uuid.New(),
-				Login:    login,
-				Password: string(hash),
-			}, nil
-		},
-	}
+	mockUserRepo := mocks.NewUserRepository(t)
+	mockRepo := mocks.NewRepository(t)
+	mockRepo.On("User").Return(mockUserRepo)
 
-	repo := &mockRepository{user: userRepo}
-	service := NewAuthService(repo, "secret")
+	mockUserRepo.On("GetByLogin", mock.Anything, "test").Return(&entity.User{
+		ID:       uuid.New(),
+		Login:    "test",
+		Password: string(hash),
+	}, nil)
 
-	token, err := service.Login(context.Background(), "test", password)
+	svc := service.NewAuthService(mockRepo, "secret")
 
+	token, err := svc.Login(context.Background(), "test", password)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 }
 
 func TestAuthService_Login_UserNotFound(t *testing.T) {
-	userRepo := &mockUserRepository{
-		getByLogin: func(ctx context.Context, login string) (*entity.User, error) {
-			return nil, errors.New("not found")
-		},
-	}
+	mockUserRepo := mocks.NewUserRepository(t)
+	mockRepo := mocks.NewRepository(t)
+	mockRepo.On("User").Return(mockUserRepo)
 
-	repo := &mockRepository{user: userRepo}
-	service := NewAuthService(repo, "secret")
+	mockUserRepo.On("GetByLogin", mock.Anything, "test").Return(nil, errors.New("not found"))
 
-	token, err := service.Login(context.Background(), "test", "password")
+	svc := service.NewAuthService(mockRepo, "secret")
 
+	token, err := svc.Login(context.Background(), "test", "password")
 	require.Error(t, err)
 	require.Empty(t, token)
 }
@@ -162,21 +85,19 @@ func TestAuthService_Login_UserNotFound(t *testing.T) {
 func TestAuthService_Login_WrongPassword(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("correct"), bcrypt.DefaultCost)
 
-	userRepo := &mockUserRepository{
-		getByLogin: func(ctx context.Context, login string) (*entity.User, error) {
-			return &entity.User{
-				ID:       uuid.New(),
-				Login:    login,
-				Password: string(hash),
-			}, nil
-		},
-	}
+	mockUserRepo := mocks.NewUserRepository(t)
+	mockRepo := mocks.NewRepository(t)
+	mockRepo.On("User").Return(mockUserRepo)
 
-	repo := &mockRepository{user: userRepo}
-	service := NewAuthService(repo, "secret")
+	mockUserRepo.On("GetByLogin", mock.Anything, "test").Return(&entity.User{
+		ID:       uuid.New(),
+		Login:    "test",
+		Password: string(hash),
+	}, nil)
 
-	token, err := service.Login(context.Background(), "test", "wrong")
+	svc := service.NewAuthService(mockRepo, "secret")
 
+	token, err := svc.Login(context.Background(), "test", "wrong")
 	require.Error(t, err)
 	require.Empty(t, token)
 }
