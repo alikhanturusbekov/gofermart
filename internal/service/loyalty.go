@@ -87,7 +87,6 @@ func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNu
 	// Subtract withdrawal from balance
 	ok, err := s.repository.User().SubtractUserBalanceTx(ctx, tx, userID, withdrawalAmount)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 	if !ok {
@@ -97,7 +96,6 @@ func (s *LoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNu
 	// Create withdrawal record
 	_, err = s.repository.Withdrawal().CreateTx(ctx, tx, userID, orderNumber, withdrawalAmount)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 

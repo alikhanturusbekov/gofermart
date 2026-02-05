@@ -35,7 +35,6 @@ func (r *UserRepository) CreateUserWithBalance(ctx context.Context, login, passw
 	user := &entity.User{}
 	err = r.scanUser(tx.QueryRowContext(ctx, queryUser, login, password), user)
 	if err != nil {
-		tx.Rollback()
 		if isUniqueViolation(err) {
 			return nil, ErrUserAlreadyExists
 		}
@@ -49,7 +48,6 @@ func (r *UserRepository) CreateUserWithBalance(ctx context.Context, login, passw
     `
 	_, err = tx.ExecContext(ctx, queryBalance, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to create user balance: %w", err)
 	}
 
