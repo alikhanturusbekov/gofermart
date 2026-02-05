@@ -2,62 +2,20 @@ package handler_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/handler"
+	"github.com/alikhanturusbekov/gofermart/internal/handler/mocks"
 	"github.com/alikhanturusbekov/gofermart/internal/middleware"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
-
-// Mocking services
-
-type MockAuthService struct {
-	RegisterFn func(ctx context.Context, login, password string) (string, error)
-	LoginFn    func(ctx context.Context, login, password string) (string, error)
-}
-
-func (m *MockAuthService) Register(ctx context.Context, login, password string) (string, error) {
-	return m.RegisterFn(ctx, login, password)
-}
-
-func (m *MockAuthService) Login(ctx context.Context, login, password string) (string, error) {
-	return m.LoginFn(ctx, login, password)
-}
-
-type MockLoyaltyService struct {
-	UploadOrderFn        func(ctx context.Context, userID uuid.UUID, number string) error
-	GetUserOrdersFn      func(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error)
-	GetUserBalanceFn     func(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error)
-	WithdrawFn           func(ctx context.Context, userID uuid.UUID, orderNumber string, withdrawalAmount float64) error
-	GetUserWithdrawalsFn func(ctx context.Context, userID uuid.UUID) ([]*entity.Withdrawal, error)
-}
-
-func (m *MockLoyaltyService) UploadOrder(ctx context.Context, userID uuid.UUID, number string) error {
-	return m.UploadOrderFn(ctx, userID, number)
-}
-
-func (m *MockLoyaltyService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*entity.Order, error) {
-	return m.GetUserOrdersFn(ctx, userID)
-}
-
-func (m *MockLoyaltyService) GetUserBalance(ctx context.Context, userID uuid.UUID) (*entity.UserBalance, error) {
-	return m.GetUserBalanceFn(ctx, userID)
-}
-
-func (m *MockLoyaltyService) Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, withdrawalAmount float64) error {
-	return m.WithdrawFn(ctx, userID, orderNumber, withdrawalAmount)
-}
-
-func (m *MockLoyaltyService) GetUserWithdrawals(ctx context.Context, userID uuid.UUID) ([]*entity.Withdrawal, error) {
-	return m.GetUserWithdrawalsFn(ctx, userID)
-}
 
 func makeRequest(method, body string, userID uuid.UUID) *http.Request {
 	req := httptest.NewRequest(method, "/", bytes.NewBufferString(body))
@@ -65,17 +23,11 @@ func makeRequest(method, body string, userID uuid.UUID) *http.Request {
 	return req.WithContext(ctx)
 }
 
-// Tests start here
-
 func TestRegister(t *testing.T) {
-	mockAuth := &MockAuthService{
-		RegisterFn: func(ctx context.Context, login, password string) (string, error) {
-			if login == "exists" {
-				return "", postgres.ErrUserAlreadyExists
-			}
-			return "token", nil
-		},
-	}
+	mockAuth := mocks.NewAuthService(t)
+
+	mockAuth.On("Register", mock.Anything, "user", "pass").Return("token", nil)
+	mockAuth.On("Register", mock.Anything, "exists", "pass").Return("", postgres.ErrUserAlreadyExists)
 
 	h := handler.NewHandler(mockAuth, nil)
 
@@ -108,14 +60,9 @@ func TestRegister(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	mockAuth := &MockAuthService{
-		LoginFn: func(ctx context.Context, login, password string) (string, error) {
-			if login == "fail" {
-				return "", errors.New("invalid")
-			}
-			return "token", nil
-		},
-	}
+	mockAuth := mocks.NewAuthService(t)
+	mockAuth.On("Login", mock.Anything, "user", "pass").Return("token", nil)
+	mockAuth.On("Login", mock.Anything, "fail", "pass").Return("", errors.New("invalid"))
 
 	h := handler.NewHandler(mockAuth, nil)
 
@@ -143,16 +90,12 @@ func TestLogin(t *testing.T) {
 
 func TestUploadOrder(t *testing.T) {
 	userID := uuid.New()
-	mockLoyalty := &MockLoyaltyService{
-		UploadOrderFn: func(ctx context.Context, uid uuid.UUID, number string) error {
-			if number == "4111111111111111" {
-				return service.ErrOrderExistsByUser
-			} else if number == "4222222222222" {
-				return service.ErrOrderExistsByOther
-			}
-			return nil
-		},
-	}
+	mockLoyalty := mocks.NewLoyaltyService(t)
+
+	mockLoyalty.On("UploadOrder", mock.Anything, userID, "79927398713").Return(nil)
+	mockLoyalty.On("UploadOrder", mock.Anything, userID, "4111111111111111").Return(service.ErrOrderExistsByUser)
+	mockLoyalty.On("UploadOrder", mock.Anything, userID, "4222222222222").Return(service.ErrOrderExistsByOther)
+
 	h := handler.NewHandler(nil, mockLoyalty)
 
 	req := makeRequest(http.MethodPost, "79927398713", userID) // Valid Luhn
@@ -186,14 +129,9 @@ func TestUploadOrder(t *testing.T) {
 
 func TestGetUserOrders(t *testing.T) {
 	userID := uuid.New()
-	mockLoyalty := &MockLoyaltyService{
-		GetUserOrdersFn: func(ctx context.Context, uid uuid.UUID) ([]*entity.Order, error) {
-			if uid == userID {
-				return []*entity.Order{{Number: "ORD1"}}, nil
-			}
-			return nil, nil
-		},
-	}
+	mockLoyalty := mocks.NewLoyaltyService(t)
+	mockLoyalty.On("GetUserOrders", mock.Anything, userID).Return([]*entity.Order{{Number: "ORD1"}}, nil)
+
 	h := handler.NewHandler(nil, mockLoyalty)
 
 	req := makeRequest(http.MethodGet, "", userID)
@@ -213,11 +151,9 @@ func TestGetUserOrders(t *testing.T) {
 
 func TestGetUserBalance(t *testing.T) {
 	userID := uuid.New()
-	mockLoyalty := &MockLoyaltyService{
-		GetUserBalanceFn: func(ctx context.Context, uid uuid.UUID) (*entity.UserBalance, error) {
-			return &entity.UserBalance{Current: 100, Withdrawn: 20}, nil
-		},
-	}
+	mockLoyalty := mocks.NewLoyaltyService(t)
+	mockLoyalty.On("GetUserBalance", mock.Anything, userID).Return(&entity.UserBalance{Current: 100, Withdrawn: 20}, nil)
+
 	h := handler.NewHandler(nil, mockLoyalty)
 
 	req := makeRequest(http.MethodGet, "", userID)
@@ -237,14 +173,10 @@ func TestGetUserBalance(t *testing.T) {
 
 func TestWithdraw(t *testing.T) {
 	userID := uuid.New()
-	mockLoyalty := &MockLoyaltyService{
-		WithdrawFn: func(ctx context.Context, uid uuid.UUID, order string, sum float64) error {
-			if sum > 50 {
-				return service.ErrNotEnoughBalance
-			}
-			return nil
-		},
-	}
+	mockLoyalty := mocks.NewLoyaltyService(t)
+	mockLoyalty.On("Withdraw", mock.Anything, userID, "79927398713", 40.0).Return(nil)
+	mockLoyalty.On("Withdraw", mock.Anything, userID, "79927398713", 60.0).Return(service.ErrNotEnoughBalance)
+
 	h := handler.NewHandler(nil, mockLoyalty)
 
 	body := `{"order":"79927398713","sum":40}`
@@ -274,13 +206,10 @@ func TestWithdraw(t *testing.T) {
 
 func TestGetUserWithdrawals(t *testing.T) {
 	userID := uuid.New()
-	mockLoyalty := &MockLoyaltyService{
-		GetUserWithdrawalsFn: func(ctx context.Context, uid uuid.UUID) ([]*entity.Withdrawal, error) {
-			return []*entity.Withdrawal{
-				{OrderNumber: "ORD1", Sum: floatPtr(10)},
-			}, nil
-		},
-	}
+	mockLoyalty := mocks.NewLoyaltyService(t)
+	mockLoyalty.On("GetUserWithdrawals", mock.Anything, userID).Return([]*entity.Withdrawal{
+		{OrderNumber: "ORD1", Sum: floatPtr(10)},
+	}, nil)
 	h := handler.NewHandler(nil, mockLoyalty)
 
 	req := makeRequest(http.MethodGet, "", userID)
