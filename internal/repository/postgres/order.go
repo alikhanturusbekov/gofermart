@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/alikhanturusbekov/gofermart/internal/database"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/google/uuid"
@@ -38,7 +39,6 @@ func (r *OrderRepository) Create(ctx context.Context, userID uuid.UUID, number s
 	return order, nil
 }
 
-// GetByNumber returns the order by number
 func (r *OrderRepository) GetByNumber(ctx context.Context, number string) (*entity.Order, error) {
 	query := `
 		SELECT id, user_id, number, status, accrual, uploaded_at
@@ -47,12 +47,19 @@ func (r *OrderRepository) GetByNumber(ctx context.Context, number string) (*enti
 	`
 
 	order := &entity.Order{}
-	err := r.scanOrder(r.database.QueryRowContext(ctx, query, number), order)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
 
+	err := database.WithRetry(ctx, database.DefaultDBRetries, database.DefaultDBRetryDelay, func() error {
+		if err := r.scanOrder(r.database.QueryRowContext(ctx, query, number), order); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				order = nil
+				return nil
+			}
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
 		return nil, fmt.Errorf("failed to get order by number: %w", err)
 	}
 
@@ -69,10 +76,14 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, number string, 
 	`
 
 	order := &entity.Order{}
-	err := r.scanOrder(
-		r.database.QueryRowContext(ctx, query, number, status),
-		order,
-	)
+
+	err := database.WithRetry(ctx, database.DefaultDBRetries, database.DefaultDBRetryDelay, func() error {
+		if err := r.scanOrder(r.database.QueryRowContext(ctx, query, number, status), order); err != nil {
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order status: %w", err)
 	}
