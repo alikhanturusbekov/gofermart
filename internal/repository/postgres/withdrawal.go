@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/alikhanturusbekov/gofermart/internal/database"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/google/uuid"
@@ -43,23 +44,34 @@ func (r *WithdrawalRepository) GetAllByUser(ctx context.Context, userID uuid.UUI
 		ORDER BY processed_at DESC
 	`
 
-	rows, err := r.database.QueryContext(ctx, query, userID)
+	var withdrawals []*entity.Withdrawal
+
+	err := database.WithRetry(ctx, database.DefaultDBRetries, database.DefaultDBRetryDelay, func() error {
+		rows, err := r.database.QueryContext(ctx, query, userID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		var tempWithdrawals []*entity.Withdrawal
+		for rows.Next() {
+			withdrawal := &entity.Withdrawal{}
+			if scanErr := r.scanWithdrawal(rows, withdrawal); scanErr != nil {
+				return scanErr
+			}
+			tempWithdrawals = append(tempWithdrawals, withdrawal)
+		}
+
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
+		withdrawals = tempWithdrawals
+		return nil
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get withdrawals by user: %w", err)
-	}
-	defer rows.Close()
-
-	var withdrawals []*entity.Withdrawal
-	for rows.Next() {
-		withdrawal := &entity.Withdrawal{}
-		if err := r.scanWithdrawal(rows, withdrawal); err != nil {
-			return nil, fmt.Errorf("failed to scan withdrawal: %w", err)
-		}
-		withdrawals = append(withdrawals, withdrawal)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	return withdrawals, nil

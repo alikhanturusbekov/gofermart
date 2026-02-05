@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/alikhanturusbekov/gofermart/internal/database"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/repository"
 	"github.com/google/uuid"
@@ -68,7 +69,10 @@ func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*entity.
 	`
 
 	user := &entity.User{}
-	err := r.scanUser(r.database.QueryRowContext(ctx, query, login), user)
+
+	err := database.WithRetry(ctx, database.DefaultDBRetries, database.DefaultDBRetryDelay, func() error {
+		return r.scanUser(r.database.QueryRowContext(ctx, query, login), user)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by login: %w", err)
 	}
@@ -85,7 +89,10 @@ func (r *UserRepository) GetUserBalance(ctx context.Context, userID uuid.UUID) (
 	`
 
 	userBalance := &entity.UserBalance{}
-	err := r.scanUserBalance(r.database.QueryRowContext(ctx, query, userID), userBalance)
+
+	err := database.WithRetry(ctx, database.DefaultDBRetries, database.DefaultDBRetryDelay, func() error {
+		return r.scanUserBalance(r.database.QueryRowContext(ctx, query, userID), userBalance)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user balance: %w", err)
 	}
