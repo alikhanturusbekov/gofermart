@@ -10,6 +10,7 @@ import (
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/validation"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"strings"
@@ -62,7 +63,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logrus.
+				WithError(err).
+				WithField("login", request.Login).
+				Error("error while registering user")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -128,7 +133,13 @@ func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logrus.
+				WithError(err).
+				WithField("userID", userID).
+				WithField("orderNumber", orderNumber).
+				Error("error while uploading order by user")
+
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -145,7 +156,11 @@ func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 
 	orders, err := h.loyaltyService.GetUserOrders(r.Context(), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logrus.
+			WithError(err).
+			WithField("userID", userID).
+			Error("error while getting all orders by user")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -168,7 +183,11 @@ func (h *Handler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 
 	userBalance, err := h.loyaltyService.GetUserBalance(r.Context(), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logrus.
+			WithError(err).
+			WithField("userID", userID).
+			Error("error while getting user balance")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -208,7 +227,13 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusPaymentRequired)
 			return
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logrus.
+				WithError(err).
+				WithField("order", request.Order).
+				WithField("sum", request.Sum).
+				WithField("userID", userID).
+				Error("error while withdrawing points from user balance")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -225,7 +250,11 @@ func (h *Handler) GetUserWithdrawals(w http.ResponseWriter, r *http.Request) {
 
 	withdrawals, err := h.loyaltyService.GetUserWithdrawals(r.Context(), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logrus.
+			WithError(err).
+			WithField("userID", userID).
+			Error("error while getting user withdrawals")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
