@@ -28,7 +28,11 @@ func (r *OrderRepository) Create(ctx context.Context, userID uuid.UUID, number s
 	`
 
 	order := &entity.Order{}
-	err := r.scanOrder(r.database.QueryRowContext(ctx, query, userID, number, entity.StatusNew), order)
+
+	err := database.WithRetry(ctx, database.DefaultDBRetries, database.DefaultDBRetryDelay, func() error {
+		return r.scanOrder(r.database.QueryRowContext(ctx, query, userID, number, entity.StatusNew), order)
+	})
+
 	if err != nil {
 		if isUniqueViolation(err) {
 			return nil, ErrOrderAlreadyExists
@@ -121,23 +125,34 @@ func (r *OrderRepository) GetAllByUser(ctx context.Context, userID uuid.UUID) ([
 		ORDER BY uploaded_at DESC
 	`
 
-	rows, err := r.database.QueryContext(ctx, query, userID)
+	var orders []*entity.Order
+
+	err := database.WithRetry(ctx, database.DefaultDBRetries, database.DefaultDBRetryDelay, func() error {
+		rows, err := r.database.QueryContext(ctx, query, userID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		var tempOrders []*entity.Order
+		for rows.Next() {
+			order := &entity.Order{}
+			if scanErr := r.scanOrder(rows, order); scanErr != nil {
+				return scanErr
+			}
+			tempOrders = append(tempOrders, order)
+		}
+
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
+		orders = tempOrders
+		return nil
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders by user: %w", err)
-	}
-	defer rows.Close()
-
-	var orders []*entity.Order
-	for rows.Next() {
-		order := &entity.Order{}
-		if err := r.scanOrder(rows, order); err != nil {
-			return nil, fmt.Errorf("failed to scan order: %w", err)
-		}
-		orders = append(orders, order)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	return orders, nil
