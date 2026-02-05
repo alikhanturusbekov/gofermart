@@ -54,6 +54,10 @@ func TestRetryClient_Do_NoRetryOn200(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	resp, err := c.Do(context.Background(), req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -77,6 +81,10 @@ func TestRetryClient_Do_RetryExhausted(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	resp, err := c.Do(context.Background(), req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -103,6 +111,9 @@ func TestRetryClient_Do_ContextCancelled(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	resp, err := c.Do(ctx, req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	if err == nil {
 		t.Fatal("expected context error")
 	}

@@ -198,11 +198,7 @@ func TestProcessOrder_Registered(t *testing.T) {
 	orderRepo.On("UpdateOrderStatus", ctx, "123", entity.StatusProcessing).
 		Return(order, nil)
 
-	newClient := newTestClient(
-		http.StatusOK,
-		`{"status":"REGISTERED"}`,
-		http.Header{},
-	)
+	newClient := newTestClient()
 
 	worker := &OrderProcessor{
 		repository: repo,
@@ -232,11 +228,7 @@ func TestProcessOrder_TooManyRequests(t *testing.T) {
 	headers := http.Header{}
 	headers.Set("Retry-After", "120")
 
-	newClient := newTestClient(
-		http.StatusTooManyRequests,
-		"",
-		headers,
-	)
+	newClient := newTestClient()
 
 	worker := &OrderProcessor{
 		repository: repo,
@@ -276,15 +268,7 @@ func TestProcessOrder_HTTPError(t *testing.T) {
 	worker.processOrder(ctx, entity.OrderProcessTask{Number: "123"})
 }
 
-func newTestClient(
-	status int,
-	body string,
-	headers http.Header,
-) *client.Client {
-	if headers == nil {
-		headers = http.Header{}
-	}
-
+func newTestClient() *client.Client {
 	// Fake transport to intercept HTTP calls
 	transport := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		return nil, errors.New("server error")
