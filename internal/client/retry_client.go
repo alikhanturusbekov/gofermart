@@ -40,7 +40,7 @@ func (c *RetryClient) Do(ctx context.Context, req *http.Request) (*http.Response
 
 		lastErr = err
 
-		timer := time.NewTimer(c.delay)
+		timer := time.NewTimer(time.Duration(attempt) * c.delay)
 
 		select {
 		case <-ctx.Done():
