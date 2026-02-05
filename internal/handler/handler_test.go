@@ -7,7 +7,7 @@ import (
 	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
 	"github.com/alikhanturusbekov/gofermart/internal/handler"
-	"github.com/alikhanturusbekov/gofermart/internal/middleware/auth"
+	"github.com/alikhanturusbekov/gofermart/internal/middleware"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/google/uuid"
@@ -61,7 +61,7 @@ func (m *MockLoyaltyService) GetUserWithdrawals(ctx context.Context, userID uuid
 
 func makeRequest(method, body string, userID uuid.UUID) *http.Request {
 	req := httptest.NewRequest(method, "/", bytes.NewBufferString(body))
-	ctx := auth.WithUserID(req.Context(), userID)
+	ctx := middleware.WithUserID(req.Context(), userID)
 	return req.WithContext(ctx)
 }
 

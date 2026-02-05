@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/alikhanturusbekov/gofermart/internal/entity"
-	"github.com/alikhanturusbekov/gofermart/internal/middleware/auth"
+	"github.com/alikhanturusbekov/gofermart/internal/middleware"
 	"github.com/alikhanturusbekov/gofermart/internal/repository/postgres"
 	"github.com/alikhanturusbekov/gofermart/internal/service"
 	"github.com/alikhanturusbekov/gofermart/internal/validation"
@@ -103,7 +103,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 // UploadOrder uploads an order for user
 func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	// Gets userID from context
-	userID, ok := auth.UserIDFromContext(r.Context())
+	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}
@@ -149,7 +149,7 @@ func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 
 // GetUserOrders gets all orders owned by user
 func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
-	userID, ok := auth.UserIDFromContext(r.Context())
+	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}
@@ -176,7 +176,7 @@ func (h *Handler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 
 // GetUserBalance gets user balance
 func (h *Handler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
-	userID, ok := auth.UserIDFromContext(r.Context())
+	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}
@@ -198,7 +198,7 @@ func (h *Handler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 
 // Withdraw gets points from balance for specific order
 func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
-	userID, ok := auth.UserIDFromContext(r.Context())
+	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}
@@ -243,7 +243,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 
 // GetUserWithdrawals gets all withdrawals owned by user
 func (h *Handler) GetUserWithdrawals(w http.ResponseWriter, r *http.Request) {
-	userID, ok := auth.UserIDFromContext(r.Context())
+	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}
